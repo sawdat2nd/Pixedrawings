@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pixel Art Creator</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --dark: #1e293b;
+            --light: #f8fafc;
+            --gray: #e2e8f0;
+            --border-radius: 8px;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f1f5f9;
+            color: var(--dark);
+            line-height: 1.5;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        h1 {
+            font-size: 2rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(90deg, #6366f1, #8b5cf6);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .app-container {
+            display: grid;
+            grid-template-columns: 80px 1fr;
+            gap: 1.5rem;
+        }
+
+        .panel {
+            background-color: white;
+            border-radius: var(--border-radius);
+            padding: 1rem;
+            box-shadow: var(--shadow);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        /* Toolbox Styles */
+        .toolbox {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .tool-btn {
+            width: 100%;
+            height: 40px;
+            border-radius: var(--border-radius);
+            border: none;
+            background-color: white;
+            color: var(--dark);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .tool-btn:hover {
+            background-color: #f1f5f9;
+        }
+
+        .tool-btn.active {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        .tool-btn i {
+            font-size: 16px;
+        }
+
+        /* Tool Settings Panel */
+        .tool-settings {
+            position: absolute;
+            left: calc(100% + 10px);
+            top: 0;
+            width: 200px;
+            background-color: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            padding: 1rem;
+            z-index: 100;
+            display: none;
+        }
+
+        .tool-settings.active {
+            display: block;
+        }
+
+        .tool-settings h3 {
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+            color: var(--dark);
+        }
+
+        .tool-settings label {
+            display: block;
+            font-size: 0.8rem;
+            margin-bottom: 0.25rem;
+            color: #64748b;
+        }
+
+        .tool-settings input[type="range"],
+        .tool-settings input[type="number"] {
+            width: 100%;
+            margin-bottom: 0.75rem;
+        }
+
+        .color-picker-container {
+            margin-top: auto;
+            margin-bottom: 10px;
+        }
+
+        #colorPicker {
+            width: 100%;
+            height: 40px;
+            border: none;
+            cursor: pointer;
+            border-radius: var(--border-radius);
+        }
+
+        .color-history {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-top: 10px;
+        }
+
+        .color-swatch {
+            width: 20px;
+            height: 20px;
+            border-radius: 3px;
+            cursor: pointer;
+            border: 1px solid var(--gray);
+            transition: transform 0.2s;
+        }
+
+        .color-swatch:hover {
+            transform: scale(1.1);
+        }
+
+        .canvas-container {
+            position: relative;
+            background-color: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            padding: 1rem;
+            overflow: auto;
+        }
+
+        #pixelCanvas {
+            display: grid;
+            margin: 0 auto;
+            background-color: white;
+        }
+
+        .pixel {
+            box-sizing: border-box;
+            cursor: crosshair;
+            transition: transform 0.1s;
+        }
+
+        .pixel:hover {
+            transform: scale(1.05);
+            z-index: 1;
+        }
+
+        .show-grid .pixel {
+            border: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        @media (max-width: 768px) {
+            .app-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .toolbox {
+                flex-direction: row;
+                flex-wrap: wrap;
+            }
+            
+            .tool-settings {
+                position: static;
+                width: 100%;
+                margin-top: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Pixel Art Creator</h1>
+        </header>
+
+        <div class="app-container">
+            <div class="panel">
+                <div class="toolbox">
+                    <!-- Pencil Tool -->
+                    <button class="tool-btn active" id="pencilBtn" data-tool="pencil">
+                        <i class="fas fa-pencil-alt"></i>
+                    </button>
+                    <div class="tool-settings" id="pencilSettings">
+                        <h3>Pencil Settings</h3>
+                        <label for="pencilSize">Size</label>
+                        <input type="range" id="pencilSize" min="1" max="5" value="1">
+                    </div>
+                    
+                    <!-- Eraser Tool -->
+                    <button class="tool-btn" id="eraserBtn" data-tool="eraser">
+                        <i class="fas fa-eraser"></i>
+                    </button>
+                    <div class="tool-settings" id="eraserSettings">
+                        <h3>Eraser Settings</h3>
+                        <label for="eraserSize">Size</label>
+                        <input type="range" id="eraserSize" min="1" max="5" value="1">
+                    </div>
+                    
+                    <!-- Fill Tool -->
+                    <button class="tool-btn" id="fillBtn" data-tool="fill">
+                        <i class="fas fa-fill-drip"></i>
+                    </button>
+                    <div class="tool-settings" id="fillSettings">
+                        <h3>Fill Tool</h3>
+                        <p>Click to fill connected areas with selected color</p>
+                    </div>
+                    
+                    <!-- Grid Toggle -->
+                    <button class="tool-btn" id="gridToggleBtn" data-tool="grid">
+                        <i class="fas fa-border-all"></i>
+                    </button>
+                    <div class="tool-settings" id="gridSettings">
+                        <h3>Grid Settings</h3>
+                        <button id="toggleGridBtn">Toggle Grid Visibility</button>
+                    </div>
+                    
+                    <!-- Clear Canvas -->
+                    <button class="tool-btn" id="clearBtn" data-tool="clear">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                    <div class="tool-settings" id="clearSettings">
+                        <h3>Clear Canvas</h3>
+                        <p>Are you sure you want to clear the canvas?</p>
+                        <button id="confirmClearBtn">Clear Canvas</button>
+                    </div>
+                </div>
+
+                <div class="color-picker-container">
+                    <input type="color" id="colorPicker" value="#6366f1">
+                    <div class="color-history" id="colorHistory"></div>
+                </div>
+            </div>
+
+            <div class="canvas-container">
+                <div id="pixelCanvas" class="show-grid"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // DOM elements
+        const canvas = document.getElementById('pixelCanvas');
+        const pencilBtn = document.getElementById('pencilBtn');
+        const eraserBtn = document.getElementById('eraserBtn');
+        const fillBtn = document.getElementById('fillBtn');
+        const gridToggleBtn = document.getElementById('gridToggleBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const colorPicker = document.getElementById('colorPicker');
+        const colorHistory = document.getElementById('colorHistory');
+
+        // Tool settings panels
+        const toolSettings = {
+            pencil: document.getElementById('pencilSettings'),
+            eraser: document.getElementById('eraserSettings'),
+            fill: document.getElementById('fillSettings'),
+            grid: document.getElementById('gridSettings'),
+            clear: document.getElementById('clearSettings')
+        };
+
+        // Drawing state
+        let currentColor = colorPicker.value;
+        let isDrawing = false;
+        let currentTool = 'pencil';
+        let showGrid = true;
+        let undoStack = [];
+        let redoStack = [];
+        const MAX_UNDO_STEPS = 50;
+        const COLOR_HISTORY_SIZE = 8;
+        let brushSize = 1;
+
+        // Initialize the grid
+        function createGrid(size = 16) {
+            canvas.innerHTML = '';
+            canvas.style.gridTemplateColumns = `repeat(${size}, 1fr)`;
+            canvas.style.gridTemplateRows = `repeat(${size}, 1fr)`;
+            canvas.style.width = `${size * 20}px`;
+            canvas.style.height = `${size * 20}px`;
+            
+            for (let i = 0; i < size * size; i++) {
+                const pixel = document.createElement('div');
+                pixel.className = 'pixel';
+                pixel.style.backgroundColor = 'white';
+                
+                // Event listeners for drawing
+                pixel.addEventListener('mousedown', startDrawing);
+                pixel.addEventListener('mouseenter', draw);
+                pixel.addEventListener('mouseup', stopDrawing);
+                
+                canvas.appendChild(pixel);
+            }
+        }
+
+        // Save current canvas state
+        function saveState() {
+            const pixels = document.querySelectorAll('.pixel');
+            const state = Array.from(pixels).map(pixel => pixel.style.backgroundColor);
+            
+            undoStack.push(state);
+            if (undoStack.length > MAX_UNDO_STEPS) {
+                undoStack.shift();
+            }
+            redoStack = []; // Clear redo stack when new action is performed
+        }
+
+        // Undo last action
+        function undo() {
+            if (undoStack.length === 0) return;
+            
+            const currentState = Array.from(document.querySelectorAll('.pixel')).map(p => p.style.backgroundColor);
+            redoStack.push(currentState);
+            
+            const prevState = undoStack.pop();
+            const pixels = document.querySelectorAll('.pixel');
+            prevState.forEach((color, index) => {
+                pixels[index].style.backgroundColor = color;
+            });
+        }
+
+        // Add color to history
+        function addColorToHistory(color) {
+            // Check if color already exists in history
+            const existingColors = Array.from(colorHistory.querySelectorAll('.color-swatch'))
+                .map(swatch => swatch.style.backgroundColor);
+            
+            if (existingColors.includes(color)) return;
+            
+            const swatch = document.createElement('div');
+            swatch.className = 'color-swatch';
+            swatch.style.backgroundColor = color;
+            swatch.title = color;
+            swatch.addEventListener('click', () => {
+                currentColor = color;
+                colorPicker.value = rgbToHex(color);
+                setTool('pencil');
+            });
+            
+            colorHistory.prepend(swatch);
+            
+            // Limit history size
+            if (colorHistory.children.length > COLOR_HISTORY_SIZE) {
+                colorHistory.removeChild(colorHistory.lastChild);
+            }
+        }
+
+        // Convert RGB string to hex
+        function rgbToHex(rgb) {
+            if (rgb.startsWith('#')) return rgb;
+            
+            // Extract RGB values
+            const match = rgb.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/);
+            if (!match) return '#000000';
+            
+            const r = parseInt(match[1]);
+            const g = parseInt(match[2]);
+            const b = parseInt(match[3]);
+            
+            return '#' + [r, g, b].map(x => {
+                const hex = x.toString(16);
+                return hex.length === 1 ? '0' + hex : hex;
+            }).join('');
+        }
+
+        // Set active tool
+        function setTool(tool) {
+            currentTool = tool;
+            
+            // Update active button
+            pencilBtn.classList.remove('active');
+            eraserBtn.classList.remove('active');
+            fillBtn.classList.remove('active');
+            gridToggleBtn.classList.remove('active');
+            clearBtn.classList.remove('active');
+            
+            if (tool === 'pencil') {
+                pencilBtn.classList.add('active');
+            } else if (tool === 'eraser') {
+                eraserBtn.classList.add('active');
+            } else if (tool === 'fill') {
+                fillBtn.classList.add('active');
+            } else if (tool === 'grid') {
+                gridToggleBtn.classList.add('active');
+            } else if (tool === 'clear') {
+                clearBtn.classList.add('active');
+            }
+            
+            // Hide all settings panels first
+            Object.values(toolSettings).forEach(panel => {
+                panel.classList.remove('active');
+            });
+            
+            // Show settings for current tool
+            if (toolSettings[tool]) {
+                toolSettings[tool].classList.add('active');
+            }
+        }
+
+        // Toggle grid visibility
+        function toggleGrid() {
+            showGrid = !showGrid;
+            if (showGrid) {
+                canvas.classList.add('show-grid');
+            } else {
+                canvas.classList.remove('show-grid');
+            }
+        }
+
+        // Drawing functions
+        function startDrawing(e) {
+            e.preventDefault();
+            isDrawing = true;
+            
+            const pixel = e.target;
+            const x = parseInt(pixel.dataset.x);
+            const y = parseInt(pixel.dataset.y);
+            
+            if (currentTool === 'fill') {
+                saveState();
+                const targetColor = pixel.style.backgroundColor;
+                floodFill(x, y, targetColor, currentColor);
+                addColorToHistory(currentColor);
+                isDrawing = false;
+            } else {
+                draw(e);
+            }
+        }
+
+        function draw(e) {
+            if (!isDrawing) return;
+            
+            const pixel = e.target;
+            const prevColor = pixel.style.backgroundColor;
+            
+            if (currentTool === 'eraser') {
+                pixel.style.backgroundColor = 'white';
+            } else if (currentTool === 'pencil') {
+                pixel.style.backgroundColor = currentColor;
+            }
+            
+            // Only save state if color actually changed
+            if (pixel.style.backgroundColor !== prevColor) {
+                saveState();
+                if (currentTool === 'pencil') {
+                    addColorToHistory(currentColor);
+                }
+            }
+        }
+
+        function stopDrawing() {
+            isDrawing = false;
+        }
+
+        // Flood fill algorithm
+        function floodFill(x, y, targetColor, replacementColor) {
+            // Convert canvas to 2D array for easier processing
+            const pixels = document.querySelectorAll('.pixel');
+            const size = Math.sqrt(pixels.length);
+            const grid = [];
+            
+            for (let i = 0; i < size; i++) {
+                grid[i] = [];
+                for (let j = 0; j < size; j++) {
+                    const index = i * size + j;
+                    grid[i][j] = pixels[index].style.backgroundColor;
+                }
+            }
+            
+            // Check if target color is same as replacement color
+            if (targetColor === replacementColor) return;
+            
+            // Check if starting pixel is not the target color
+            if (grid[y][x] !== targetColor) return;
+            
+            // Perform flood fill
+            const queue = [[x, y]];
+            
+            while (queue.length > 0) {
+                const [currentX, currentY] = queue.shift();
+                
+                // Check boundaries and color match
+                if (currentX < 0 || currentX >= size || currentY < 0 || currentY >= size) continue;
+                if (grid[currentY][currentX] !== targetColor) continue;
+                
+                // Fill the pixel
+                grid[currentY][currentX] = replacementColor;
+                const index = currentY * size + currentX;
+                pixels[index].style.backgroundColor = replacementColor;
+                
+                // Add neighbors to queue
+                queue.push([currentX + 1, currentY]);
+                queue.push([currentX - 1, currentY]);
+                queue.push([currentX, currentY + 1]);
+                queue.push([currentX, currentY - 1]);
+            }
+        }
+
+        // Event listeners
+        pencilBtn.addEventListener('click', function() {
+            setTool('pencil');
+        });
+
+        eraserBtn.addEventListener('click', function() {
+            setTool('eraser');
+        });
+
+        fillBtn.addEventListener('click', function() {
+            setTool('fill');
+        });
+
+        gridToggleBtn.addEventListener('click', function() {
+            setTool('grid');
+        });
+
+        clearBtn.addEventListener('click', function() {
+            setTool('clear');
+        });
+
+        document.getElementById('toggleGridBtn').addEventListener('click', toggleGrid);
+
+        document.getElementById('confirmClearBtn').addEventListener('click', function() {
+            saveState();
+            const pixels = document.querySelectorAll('.pixel');
+            pixels.forEach(pixel => {
+                pixel.style.backgroundColor = 'white';
+            });
+        });
+
+        colorPicker.addEventListener('input', function() {
+            currentColor = this.value;
+            setTool('pencil');
+            addColorToHistory(currentColor);
+        });
+
+        // Brush size controls
+        document.getElementById('pencilSize').addEventListener('input', function() {
+            brushSize = parseInt(this.value);
+        });
+
+        // Initialize
+        createGrid(16);
+        setTool('pencil');
+        addColorToHistory('#6366f1');
+        addColorToHistory('#10b981');
+        addColorToHistory('#f59e0b');
+        addColorToHistory('#ef4444');
+        addColorToHistory('#000000');
+    </script>
+</body>
+</html>
